@@ -1,0 +1,49 @@
+version: 0.2
+
+env:
+  variables:
+    S3_BUCKET: "troy-rocks"
+    APP_NAME: "ng-aws2"
+    BUILD_ENV : "prod"
+
+phases:
+  install:
+    commands:
+      - sudo apt-get update -y
+      - sudo apt-get install -y python2.7
+      - python --version
+      # Download and Install NodeJS 10.x
+      - curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+      - sudo apt-get install -y nodejs
+      - echo Installing source NPM dependencies...
+      # Install http drivers for node
+      - sudo apt-get update -y
+      - sudo apt-get install -y apt-transport-https
+      # Install Yarn Package Manager
+      - curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+      - echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+      - sudo apt-get update -y
+      - sudo apt-get install -y yarn
+      # Install Angular CLI, If you are not using Angular 6, install angular/cli@1.7.0 or lower, confirm by running ng -v inside your project folder
+      - yarn global add @angular/cli@6.0.8
+      # Install node dependencies.
+      - yarn install
+
+  build:
+    commands:
+      # Builds the Angular application
+      - echo Build started on `date`
+      - ng build --${BUILD_ENV}
+
+  post_build:
+    commands:
+      - aws s3 rm s3://${S3_BUCKET} --recursive
+      - echo S3 bucket is cleared.
+      - aws s3 cp dist/${APP_NAME} s3://${S3_BUCKET} --recursive
+      - echo Build completed on `date`
+
+artifacts:
+  files:
+    - '**/*'
+  discard-paths: yes
+  base-directory: 'dist*'
